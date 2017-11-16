@@ -10,8 +10,11 @@ import json
 import csv
 from bs4 import BeautifulSoup
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 DOMAIN = "https://www.pinkoi.com"
+pool = ThreadPoolExecutor()
+
 
 def crawl_list(category_url):
     style_list = ['cute','minimal','romantic','neutral','vintage','zakka','urban','zen','green']
@@ -93,15 +96,12 @@ def crawl_product(product_info):
     else:
         product_dict['view_count'] = "0"
     product_dict['comments'] = crawl_comments(product_info)
-
-    print("crawled "+product_url)
-
     return product_dict
 
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    category_url = input('category url :')
+    category_url = 'https://www.pinkoi.com/browse/?category=9&subcategory=903'
     category_num = re.findall('\?category=(\d+)',category_url)
     subcategory_num = re.findall('subcategory=(\d+)',category_url)
     product_list = crawl_list(str(category_url))
@@ -111,9 +111,9 @@ if __name__ == "__main__":
         writer.writeheader()
 
         for product_info in product_list:
-            product_dict = crawl_product(product_info)
-            writer.writerow(product_dict)
-            f.flush()
+            future = pool.submit(crawl_product,(product_info))
+            pool.submit(writer.writerow,future.result())
+            print("crwaled ",product_info["url"])
     end_time = datetime.now()
-    time_spent = str(end_time - start_time).split(".")[0]
-    print('spent %s'%time_spent)
+    time_spent = str(end_time - start_time).split('.')[0]
+    print('time spent %s'%time_spent)

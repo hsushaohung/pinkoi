@@ -10,11 +10,12 @@ import json
 import csv
 from bs4 import BeautifulSoup
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, wait
 
 DOMAIN = "https://www.pinkoi.com"
+style_list = ['cute','minimal','romantic','neutral','vintage','zakka','urban','zen','green']
 
-def crawl_list(category_url):
-    style_list = ['cute','minimal','romantic','neutral','vintage','zakka','urban','zen','green']
+def crawl_list(category_url,style):
     product_list = []
 
     # style loop
@@ -98,22 +99,33 @@ def crawl_product(product_info):
 
     return product_dict
 
+def crawl_save(product_info):
+    product_dict = crawl_product(product_info)
+    writer.writerrow(product_dict)
+    f.flush()
 
 if __name__ == "__main__":
     start_time = datetime.now()
-    category_url = input('category url :')
+    category_url = "https://www.pinkoi.com/browse/?category=9&subcategory=903" 
     category_num = re.findall('\?category=(\d+)',category_url)
     subcategory_num = re.findall('subcategory=(\d+)',category_url)
-    product_list = crawl_list(str(category_url))
+    product_list = [] 
+    pool = ThreadPoolExecutor()
+    futures = []
+    style_list = ['cute','minimal','romantic','neutral','vintage','zakka','urban','zen','green']
     with open('pinkoi_%s_%s.csv'%(category_num[0],subcategory_num[0]),'w') as f:
         headers = ['title', 'price', 'category', 'material','brand','description','view_count','comments','style']
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
+        
+        for style in style_list:
+            futures.append(pool.submit(crawl_list,category=category_url,style=style))
+            product_list.append((pool.submit(crawl_list,category_url=category_url,style=style)).result())
+        wait(futures)
 
         for product_info in product_list:
-            product_dict = crawl_product(product_info)
-            writer.writerow(product_dict)
-            f.flush()
+            futures.append(pool.submit(crawl_save,product_info))
+        wait(futures)
     end_time = datetime.now()
     time_spent = str(end_time - start_time).split(".")[0]
     print('spent %s'%time_spent)
