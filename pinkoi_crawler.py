@@ -93,7 +93,11 @@ def crawl_product(product_info):
     else:
         product_dict['view_count'] = "0"
     product_dict['comments'] = crawl_comments(product_info)
-
+    ta_imgs = soup.select("div.thumbs > img")
+    photo_urls = []
+    for img in ta_imgs:
+        photo_urls.append((img.get("src").replace("//","")))
+    product_dict['photo_urls'] = photo_urls
     print("crawled "+product_url)
 
     return product_dict
@@ -106,7 +110,7 @@ if __name__ == "__main__":
     subcategory_num = re.findall('subcategory=(\d+)',category_url)
     product_list = crawl_list(str(category_url))
     with open('pinkoi_%s_%s.csv'%(category_num[0],subcategory_num[0]),'w') as f:
-        headers = ['title', 'price', 'category', 'material','brand','description','view_count','comments','style']
+        headers = ['title', 'price', 'category', 'material','brand','description','view_count','comments','style','photo_urls']
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
 
